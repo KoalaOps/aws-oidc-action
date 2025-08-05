@@ -1,8 +1,5 @@
 name: AWS OIDC Auth & Services Setup
-description: |
-  Authenticate to AWS using OpenID Connect (OIDC) / Workload Identity Federation.
-  Optionally configures Docker for ECR login and/or obtains EKS cluster credentials
-  based on the enabled features.
+description: "Secure AWS authentication using OIDC with optional ECR login and EKS setup"
 
 inputs:
   aws_region:
