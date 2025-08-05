@@ -1,0 +1,40 @@
+# Example: Separate steps for AWS, ECR Creation, and ECR Login
+name: Build and Push to ECR (Separate Steps)
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Step 1: Authenticate to AWS only
+      - name: Authenticate to AWS
+        uses: your-org/aws-oidc-action@v1
+        with:
+          aws_region: us-east-1
+          role_to_assume: ${{ secrets.AWS_OIDC_ROLE }}
+      
+      # Step 2: Ensure ECR repository exists (using external action)
+      - name: Ensure ECR Repository Exists
+        uses: KoalaOps/ensure-ecr-repository@v1
+        with:
+          repository-name: my-app
+          aws-region: us-east-1
+      
+      # Step 3: Login to ECR now that repository exists
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: private
+          registries: 123456789012.dkr.ecr.us-east-1.amazonaws.com
+      
+      - name: Build and push Docker image
+        run: |
+          docker build -t my-app .
+          docker tag my-app:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-app:latest
+          docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-app:latest

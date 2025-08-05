@@ -55,6 +55,36 @@ jobs:
           docker images
           echo "✅ ECR authentication successful"
 
+  test-ecr-with-ensure:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    # Only run if test repository name is available
+    if: ${{ secrets.TEST_ECR_REPO_NAME != '' }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Test AWS auth with ECR ensure and login
+        uses: ./
+        with:
+          aws_region: us-east-1
+          role_to_assume: ${{ secrets.AWS_OIDC_ROLE }}
+          ensure_ecr_repository: true
+          ecr_repository_name: ${{ secrets.TEST_ECR_REPO_NAME }}
+          enable_ecr_login: true
+          ecr_registry: ${{ secrets.ECR_REGISTRY }}
+      
+      - name: Verify ECR setup and login
+        run: |
+          # Verify repository exists
+          aws ecr describe-repositories --repository-names ${{ secrets.TEST_ECR_REPO_NAME }} --region us-east-1
+          docker images
+          echo "✅ ECR ensure and authentication successful"
+
   test-eks-auth:
     runs-on: ubuntu-latest
     permissions:
@@ -149,6 +179,22 @@ jobs:
         if: steps.test-eks-fail.outcome == 'success'
         run: |
           echo "❌ Test should have failed due to missing EKS cluster name"
+          exit 1
+      
+      - name: Test input validation - missing ECR repository name
+        uses: ./
+        continue-on-error: true
+        id: test-ecr-repo-fail
+        with:
+          aws_region: us-east-1
+          role_to_assume: arn:aws:iam::123456789012:role/test-role
+          ensure_ecr_repository: true
+          # Missing ecr_repository_name should cause failure
+      
+      - name: Verify ECR repository validation failed
+        if: steps.test-ecr-repo-fail.outcome == 'success'
+        run: |
+          echo "❌ Test should have failed due to missing ECR repository name"
           exit 1
       
       - name: Validation tests passed

@@ -42,7 +42,40 @@ jobs:
         run: aws s3 ls
 ```
 
-### ECR Login Example
+### ECR Login Example (with Repository Creation)
+
+```yaml
+name: Build and Push to ECR
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS, ensure ECR repo, and login
+        uses: your-org/aws-oidc-action@v1
+        with:
+          aws_region: us-east-1
+          role_to_assume: ${{ secrets.AWS_OIDC_ROLE }}
+          ensure_ecr_repository: true
+          ecr_repository_name: my-app
+          enable_ecr_login: true
+          ecr_registry: 123456789012.dkr.ecr.us-east-1.amazonaws.com
+      
+      - name: Build and push Docker image
+        run: |
+          docker build -t my-app .
+          docker tag my-app:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-app:latest
+          docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-app:latest
+```
+
+### ECR Login Example (Repository Already Exists)
 
 ```yaml
 name: Build and Push to ECR
@@ -119,11 +152,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Configure AWS, ECR, and EKS
+      - name: Configure AWS, ensure ECR, login to ECR, and setup EKS
         uses: your-org/aws-oidc-action@v1
         with:
           aws_region: us-west-2
           role_to_assume: ${{ secrets.AWS_OIDC_ROLE }}
+          ensure_ecr_repository: true
+          ecr_repository_name: my-app
           enable_ecr_login: true
           ecr_registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
           enable_eks_auth: true
@@ -150,6 +185,8 @@ jobs:
 | `enable_ecr_login` | Enable Docker login to ECR registry | ❌ | `false` |
 | `ecr_registry` | ECR registry hostname (required if `enable_ecr_login` is true) | ❌ | - |
 | `ecr_region` | ECR registry region (defaults to `aws_region` if not specified) | ❌ | - |
+| `ensure_ecr_repository` | Ensure ECR repository exists before login (recommended) | ❌ | `false` |
+| `ecr_repository_name` | ECR repository name to ensure exists (required if `ensure_ecr_repository` is true) | ❌ | - |
 | `enable_eks_auth` | Enable EKS cluster authentication and kubectl context setup | ❌ | `false` |
 | `eks_cluster_name` | EKS cluster name (required if `enable_eks_auth` is true) | ❌ | - |
 | `eks_cluster_region` | EKS cluster region (defaults to `aws_region` if not specified) | ❌ | - |
@@ -223,6 +260,21 @@ permissions:
 
 4. **EKS cluster name required**
    - When `enable_eks_auth: true`, you must provide `eks_cluster_name`
+
+5. **ECR repository does not exist**
+   - When pushing to ECR, ensure the repository exists first
+   - Use `ensure_ecr_repository: true` and `ecr_repository_name` to auto-create
+   - Or create the repository manually before running the workflow
+
+### ECR Repository Creation Flow
+
+⚠️ **Important**: The correct flow for ECR operations is:
+1. **Authenticate to AWS** 
+2. **Ensure ECR repository exists** (create if needed)
+3. **Login to ECR**
+4. **Push Docker images**
+
+This action handles this flow correctly when you use `ensure_ecr_repository: true`. If you don't use this option, make sure your ECR repository already exists before enabling ECR login.
 
 ### Debug Mode
 
