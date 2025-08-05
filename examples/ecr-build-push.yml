@@ -1,0 +1,32 @@
+# Example: Build and Push Docker Image to ECR
+name: Build and Push to ECR
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS and ECR
+        uses: your-org/aws-oidc-action@v1
+        with:
+          aws_region: us-east-1
+          role_to_assume: ${{ secrets.AWS_OIDC_ROLE }}
+          enable_ecr_login: true
+          ecr_registry: 123456789012.dkr.ecr.us-east-1.amazonaws.com
+      
+      - name: Build Docker image
+        run: |
+          docker build -t my-app .
+          docker tag my-app:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-app:${{ github.sha }}
+          docker tag my-app:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-app:latest
+      
+      - name: Push to ECR
+        run: |
+          docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-app:${{ github.sha }}
+          docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-app:latest

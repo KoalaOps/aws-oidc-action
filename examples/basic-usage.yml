@@ -1,0 +1,25 @@
+# Example: Basic AWS Authentication
+name: Basic AWS Authentication
+on: [push]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # Required for OIDC
+      contents: read    # Required for actions/checkout
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: your-org/aws-oidc-action@v1
+        with:
+          aws_region: us-east-1
+          role_to_assume: ${{ secrets.AWS_OIDC_ROLE }}
+      
+      - name: List S3 buckets
+        run: aws s3 ls
+      
+      - name: Get caller identity
+        run: aws sts get-caller-identity

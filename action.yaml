@@ -1,0 +1,79 @@
+name: AWS OIDC Auth & Services Setup
+description: |
+  Authenticate to AWS using OpenID Connect (OIDC) / Workload Identity Federation.
+  Optionally configures Docker for ECR login and/or obtains EKS cluster credentials
+  based on the enabled features.
+
+inputs:
+  aws_region:
+    description: "AWS region for authentication"
+    required: true
+  role_to_assume:
+    description: "IAM role ARN to assume for authentication"
+    required: true
+  enable_ecr_login:
+    description: "Enable Docker login to ECR registry"
+    required: false
+    default: "false"
+  ecr_registry:
+    description: "ECR registry hostname (required if enable_ecr_login is true)"
+    required: false
+  ecr_region:
+    description: "ECR registry region (defaults to aws_region if not specified)"
+    required: false
+  enable_eks_auth:
+    description: "Enable EKS cluster authentication and kubectl context setup"
+    required: false
+    default: "false"
+  eks_cluster_name:
+    description: "EKS cluster name (required if enable_eks_auth is true)"
+    required: false
+  eks_cluster_region:
+    description: "EKS cluster region (defaults to aws_region if not specified)"
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Validate inputs
+      run: |
+        if [ "${{ inputs.enable_ecr_login }}" = "true" ] && [ -z "${{ inputs.ecr_registry }}" ]; then
+          echo "::error::ecr_registry is required when enable_ecr_login is true"
+          exit 1
+        fi
+        
+        if [ "${{ inputs.enable_eks_auth }}" = "true" ] && [ -z "${{ inputs.eks_cluster_name }}" ]; then
+          echo "::error::eks_cluster_name is required when enable_eks_auth is true"
+          exit 1
+        fi
+        
+        if [ "${{ inputs.enable_ecr_login }}" = "false" ] && [ "${{ inputs.enable_eks_auth }}" = "false" ]; then
+          echo "Warning: Neither ECR login nor EKS auth is enabled. This action will only perform AWS authentication."
+        fi
+      shell: bash
+
+    - name: Configure AWS credentials with OIDC
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.role_to_assume }}
+        aws-region: ${{ inputs.aws_region }}
+
+    - name: Login to Amazon ECR
+      if: ${{ inputs.enable_ecr_login == 'true' }}
+      uses: aws-actions/amazon-ecr-login@v2
+      with:
+        registry-type: private
+        registries: ${{ inputs.ecr_registry }}
+
+    - name: Set up EKS credentials and context
+      if: ${{ inputs.enable_eks_auth == 'true' }}
+      env:
+        EKS_REGION: ${{ inputs.eks_cluster_region || inputs.aws_region }}
+      run: |
+        echo "Setting up EKS credentials for cluster ${{ inputs.eks_cluster_name }} in region $EKS_REGION"
+        aws eks --region $EKS_REGION update-kubeconfig --name ${{ inputs.eks_cluster_name }}
+      shell: bash
+
+branding:
+  icon: 'shield'
+  color: 'orange'

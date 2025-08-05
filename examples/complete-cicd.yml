@@ -1,0 +1,43 @@
+# Example: Complete CI/CD Pipeline (Build, Push, Deploy)
+name: Complete CI/CD Pipeline
+on: [push]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS, ECR, and EKS
+        uses: your-org/aws-oidc-action@v1
+        with:
+          aws_region: us-west-2
+          role_to_assume: ${{ secrets.AWS_OIDC_ROLE }}
+          enable_ecr_login: true
+          ecr_registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
+          enable_eks_auth: true
+          eks_cluster_name: production-cluster
+      
+      - name: Build and tag Docker image
+        run: |
+          docker build -t my-app .
+          docker tag my-app:latest 123456789012.dkr.ecr.us-west-2.amazonaws.com/my-app:${{ github.sha }}
+      
+      - name: Push image to ECR
+        run: |
+          docker push 123456789012.dkr.ecr.us-west-2.amazonaws.com/my-app:${{ github.sha }}
+      
+      - name: Update Kubernetes deployment
+        run: |
+          kubectl set image deployment/my-app \
+            container=123456789012.dkr.ecr.us-west-2.amazonaws.com/my-app:${{ github.sha }}
+          kubectl rollout status deployment/my-app
+      
+      - name: Verify deployment
+        run: |
+          kubectl get pods -l app=my-app
+          echo "Deployment completed successfully!"

@@ -1,0 +1,32 @@
+# Example: Deploy to EKS Cluster
+name: Deploy to EKS
+on: [push]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS and EKS
+        uses: your-org/aws-oidc-action@v1
+        with:
+          aws_region: us-west-2
+          role_to_assume: ${{ secrets.AWS_OIDC_ROLE }}
+          enable_eks_auth: true
+          eks_cluster_name: production-cluster
+      
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl rollout status deployment/my-app
+      
+      - name: Verify deployment
+        run: |
+          kubectl get pods -l app=my-app
+          kubectl get services my-app
