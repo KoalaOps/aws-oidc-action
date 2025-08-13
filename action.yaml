@@ -66,21 +66,13 @@ runs:
       with:
         role-to-assume: ${{ inputs.role_to_assume }}
         aws-region: ${{ inputs.aws_region }}
-
+    
     - name: Ensure ECR Repository Exists
+      uses: KoalaOps/ensure-ecr-repository@v1
       if: ${{ inputs.ensure_ecr_repository == 'true' }}
-      shell: bash
-      env:
-        ECR_REGION: ${{ inputs.ecr_region || inputs.aws_region }}
-      run: |
-        echo "🔍 Checking if ECR repository '${{ inputs.ecr_repository_name }}' exists..."
-        if aws ecr describe-repositories --repository-names ${{ inputs.ecr_repository_name }} --region $ECR_REGION >/dev/null 2>&1; then
-          echo "✅ ECR repository '${{ inputs.ecr_repository_name }}' already exists"
-        else
-          echo "📦 Creating ECR repository '${{ inputs.ecr_repository_name }}' in region $ECR_REGION..."
-          aws ecr create-repository --repository-name ${{ inputs.ecr_repository_name }} --region $ECR_REGION
-          echo "✅ ECR repository '${{ inputs.ecr_repository_name }}' created successfully"
-        fi
+      with:
+        repository-name: ${{ inputs.ecr_repository_name }}
+        aws-region: ${{ inputs.ecr_region || inputs.aws_region }}
 
     - name: Login to Amazon ECR
       if: ${{ inputs.enable_ecr_login == 'true' }}
