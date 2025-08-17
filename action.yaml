@@ -79,7 +79,6 @@ runs:
       uses: aws-actions/amazon-ecr-login@v2
       with:
         registry-type: private
-        registries: ${{ inputs.ecr_registry }}
 
     - name: Set up EKS credentials and context
       if: ${{ inputs.enable_eks_auth == 'true' }}
