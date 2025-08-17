@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-08-17
+
+### Fixed
+- Fixed ECR login error by removing explicit registries parameter - the action now uses default ECR registry for the authenticated AWS account
+
+## [1.1.0] - 2025-08-17
+
+### Added
+- Integration with KoalaOps/ensure-ecr-repository action for automatic ECR repository creation
+- New `ensure_ecr_repository` input to enable repository creation before login
+- Support for ECR region override with `ecr_region` input
+
+## [1.0.0] - 2025-08-17
+
 ### Added
 - Initial public release of AWS OIDC Action
 - Support for AWS authentication using OpenID Connect (OIDC)
@@ -24,10 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚡ Flexible feature enablement (enable only what you need)
 - 🛡️ Secure trust policies restricted to specific GitHub org/repo
 - 📊 Comprehensive validation and error handling
-
-## [1.0.0] - TBD
-
-### Added
 - Initial stable release
 
 ---
